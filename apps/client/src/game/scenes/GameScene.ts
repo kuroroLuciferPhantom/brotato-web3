@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import playerData from '../data/PlayerData';
 
 export default class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -7,16 +8,17 @@ export default class GameScene extends Phaser.Scene {
   private lastFired: number = 0;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private scoreText!: Phaser.GameObjects.Text;
-  private score: number = 0;
   private waveText!: Phaser.GameObjects.Text;
-  private currentWave: number = 1;
+  private moneyText!: Phaser.GameObjects.Text;
   private enemiesKilled: number = 0;
   private enemiesPerWave: number = 5;
   private enemySpawnTimer: number = 0;
-  private fireRate: number = 500; // Temps en ms entre chaque tir automatique
   private waveCompleted: boolean = false;
   private nextRoundBtn!: Phaser.GameObjects.Text;
   private waveCompletedText!: Phaser.GameObjects.Text;
+  private healthBar!: Phaser.GameObjects.Graphics;
+  private currentHealth: number = 100;
+  private waveStarted: boolean = true;
 
   constructor() {
     super('GameScene');
@@ -25,6 +27,9 @@ export default class GameScene extends Phaser.Scene {
   create() {
     // Réinitialiser l'état du jeu si on revient de la scène shop
     this.waveCompleted = false;
+    this.waveStarted = true;
+    this.enemiesKilled = 0;
+    this.currentHealth = playerData.stats.maxHealth;
     
     // Ajouter un fond d'écran
     this.add.tileSprite(0, 0, 800, 600, 'background')
@@ -45,7 +50,7 @@ export default class GameScene extends Phaser.Scene {
     // Créer le groupe de projectiles
     this.bullets = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
-      maxSize: 30,
+      maxSize: 50,
       runChildUpdate: true
     });
 
@@ -58,23 +63,8 @@ export default class GameScene extends Phaser.Scene {
     // Configurer les contrôles
     this.cursors = this.input.keyboard!.createCursorKeys();
     
-    // Ajouter le texte du score
-    this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-      fontSize: '18px', 
-      color: '#fff',
-      stroke: '#000',
-      strokeThickness: 3
-    });
-    this.scoreText.setScrollFactor(0);
-
-    // Ajouter le texte de la vague
-    this.waveText = this.add.text(16, 40, 'Wave: 1', { 
-      fontSize: '18px', 
-      color: '#fff',
-      stroke: '#000',
-      strokeThickness: 3
-    });
-    this.waveText.setScrollFactor(0);
+    // Créer l'interface utilisateur
+    this.createUI();
     
     // Créer le texte de vague complétée (caché par défaut)
     this.waveCompletedText = this.add.text(400, 250, 'WAVE COMPLETED!', {
@@ -98,13 +88,16 @@ export default class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.nextRoundBtn.setInteractive({ useHandCursor: true });
     this.nextRoundBtn.on('pointerdown', () => {
+      // Mettre à jour les données du joueur
+      playerData.nextWave();
+      
       // Passer à la scène de shop
-      this.scene.start('ShopScene', { 
-        currentWave: this.currentWave,
-        score: this.score
-      });
+      this.scene.start('ShopScene');
     });
     this.nextRoundBtn.setVisible(false);
+    
+    // Afficher l'indicateur de début de vague
+    this.showWaveStart();
   }
 
   update(time: number, delta: number) {
@@ -126,10 +119,12 @@ export default class GameScene extends Phaser.Scene {
     });
     
     // Génération d'ennemis périodique
-    this.enemySpawnTimer += delta;
-    if (this.enemySpawnTimer > 1000 && this.enemies.countActive() < this.currentWave * this.enemiesPerWave) {
-      this.spawnEnemy();
-      this.enemySpawnTimer = 0;
+    if (this.waveStarted) {
+      this.enemySpawnTimer += delta;
+      if (this.enemySpawnTimer > 1000 && this.enemies.countActive() < playerData.currentWave * this.enemiesPerWave) {
+        this.spawnEnemy();
+        this.enemySpawnTimer = 0;
+      }
     }
     
     // Nettoyage des balles hors de l'écran
@@ -140,6 +135,71 @@ export default class GameScene extends Phaser.Scene {
         b.setVisible(false);
       }
     });
+    
+    // Mettre à jour l'interface utilisateur
+    this.updateUI();
+  }
+  
+  private createUI() {
+    // Ajouter le texte du score
+    this.scoreText = this.add.text(16, 16, `Score: ${playerData.score}`, { 
+      fontSize: '18px', 
+      color: '#fff',
+      stroke: '#000',
+      strokeThickness: 3
+    });
+    this.scoreText.setScrollFactor(0);
+
+    // Ajouter le texte de la vague
+    this.waveText = this.add.text(16, 40, `Wave: ${playerData.currentWave}`, { 
+      fontSize: '18px', 
+      color: '#fff',
+      stroke: '#000',
+      strokeThickness: 3
+    });
+    this.waveText.setScrollFactor(0);
+    
+    // Ajouter le texte de la monnaie
+    this.moneyText = this.add.text(16, 64, `Money: ${playerData.money}`, { 
+      fontSize: '18px', 
+      color: '#fc0',
+      stroke: '#000',
+      strokeThickness: 3
+    });
+    this.moneyText.setScrollFactor(0);
+    
+    // Créer la barre de vie
+    this.healthBar = this.add.graphics();
+    this.updateHealthBar();
+  }
+  
+  private updateUI() {
+    // Mettre à jour le texte du score
+    this.scoreText.setText(`Score: ${playerData.score}`);
+    
+    // Mettre à jour le texte de la vague
+    this.waveText.setText(`Wave: ${playerData.currentWave}`);
+    
+    // Mettre à jour le texte de la monnaie
+    this.moneyText.setText(`Money: ${playerData.money}`);
+  }
+  
+  private updateHealthBar() {
+    // Dessiner la barre de vie
+    this.healthBar.clear();
+    
+    // Fond de la barre (rouge)
+    this.healthBar.fillStyle(0xff0000);
+    this.healthBar.fillRect(580, 16, 200, 20);
+    
+    // Barre de vie actuelle (vert)
+    const healthPercentage = this.currentHealth / playerData.stats.maxHealth;
+    this.healthBar.fillStyle(0x00ff00);
+    this.healthBar.fillRect(580, 16, 200 * healthPercentage, 20);
+    
+    // Bordure
+    this.healthBar.lineStyle(2, 0xffffff);
+    this.healthBar.strokeRect(580, 16, 200, 20);
   }
 
   private handlePlayerMovement() {
@@ -148,34 +208,52 @@ export default class GameScene extends Phaser.Scene {
 
     // Mouvement horizontal
     if (this.cursors.left!.isDown) {
-      this.player.setVelocityX(-200);
+      this.player.setVelocityX(-playerData.stats.moveSpeed);
     } else if (this.cursors.right!.isDown) {
-      this.player.setVelocityX(200);
+      this.player.setVelocityX(playerData.stats.moveSpeed);
     }
 
     // Mouvement vertical
     if (this.cursors.up!.isDown) {
-      this.player.setVelocityY(-200);
+      this.player.setVelocityY(-playerData.stats.moveSpeed);
     } else if (this.cursors.down!.isDown) {
-      this.player.setVelocityY(200);
+      this.player.setVelocityY(playerData.stats.moveSpeed);
     }
   }
   
   private fireWeapon(time: number) {
-    const bullet = this.bullets.get() as Phaser.Physics.Arcade.Sprite;
-    if (bullet) {
-      bullet.setActive(true);
-      bullet.setVisible(true);
-      bullet.setPosition(this.player.x, this.player.y);
+    // Tirer selon le nombre de projectiles configuré
+    for (let i = 0; i < playerData.stats.projectileCount; i++) {
+      const bullet = this.bullets.get() as Phaser.Physics.Arcade.Sprite;
       
-      // Direction aléatoire pour simplifier (à la Brotato)
-      const angle = Phaser.Math.Between(0, 360);
-      this.physics.velocityFromAngle(angle, 400, bullet.body.velocity);
-      
-      bullet.setRotation(angle * Math.PI / 180);
-      
-      this.lastFired = time + this.fireRate; // Délai entre les tirs automatiques
+      if (bullet) {
+        bullet.setActive(true);
+        bullet.setVisible(true);
+        bullet.setPosition(this.player.x, this.player.y);
+        
+        // Ajuster l'angle pour multiple projectiles
+        let angle;
+        if (playerData.stats.projectileCount === 1) {
+          angle = Phaser.Math.Between(0, 360);
+        } else {
+          // Répartir les projectiles en éventail
+          const spreadAngle = 45; // angle total de répartition en degrés
+          const baseAngle = Phaser.Math.Between(0, 360);
+          const offset = spreadAngle / (playerData.stats.projectileCount - 1);
+          angle = baseAngle - (spreadAngle / 2) + (i * offset);
+        }
+        
+        // Configurer la vélocité du projectile
+        this.physics.velocityFromAngle(angle, playerData.stats.projectileSpeed, bullet.body.velocity);
+        bullet.setRotation(angle * Math.PI / 180);
+        
+        // Stocker les dégâts du projectile
+        bullet.setData('damage', playerData.stats.damage);
+      }
     }
+    
+    // Mettre à jour le temps du prochain tir selon le fire rate
+    this.lastFired = time + playerData.stats.fireRate;
   }
 
   private spawnEnemy() {
@@ -197,12 +275,17 @@ export default class GameScene extends Phaser.Scene {
       enemy.setActive(true);
       enemy.setVisible(true);
       enemy.setPosition(x, y);
-      enemy.setScale(0.6 + (this.currentWave * 0.1)); // Augmente avec les vagues
+      enemy.setScale(0.6 + (playerData.currentWave * 0.1)); // Augmente avec les vagues
       enemy.setDepth(1);
-      enemy.setData('health', 2 + Math.floor(this.currentWave / 2));
+      
+      // La santé augmente avec les vagues
+      const health = 2 + Math.floor(playerData.currentWave / 2);
+      enemy.setData('health', health);
+      enemy.setData('maxHealth', health);
+      enemy.setData('value', 10 * playerData.currentWave); // Valeur en points
 
-      // Mouvement vers le joueur
-      this.physics.moveToObject(enemy, this.player, 80 + (this.currentWave * 5));
+      // Mouvement vers le joueur (vitesse augmente avec les vagues)
+      this.physics.moveToObject(enemy, this.player, 80 + (playerData.currentWave * 5));
     }
   }
 
@@ -214,8 +297,11 @@ export default class GameScene extends Phaser.Scene {
     bulletSprite.setActive(false);
     bulletSprite.setVisible(false);
     
+    // Obtenir les dégâts du projectile
+    const damage = bulletSprite.getData('damage') || playerData.stats.damage;
+    
     // Réduire la santé de l'ennemi
-    const health = enemySprite.getData('health') - 1;
+    const health = enemySprite.getData('health') - damage;
     enemySprite.setData('health', health);
     
     if (health <= 0) {
@@ -223,26 +309,98 @@ export default class GameScene extends Phaser.Scene {
       enemySprite.setActive(false);
       enemySprite.setVisible(false);
       
-      // Augmenter le score
-      this.score += 10 * this.currentWave;
-      this.scoreText.setText(`Score: ${this.score}`);
+      // Augmenter le score et l'argent
+      const value = enemySprite.getData('value') || 10;
+      playerData.score += value;
+      playerData.money += Math.ceil(value / 2);
+      
+      // Animation de gain de points
+      this.showPointsGained(enemySprite.x, enemySprite.y, value);
       
       // Compter les ennemis tués
       this.enemiesKilled++;
+      playerData.addKill(value);
       
       // Vérifier si la vague est terminée
-      if (this.enemiesKilled >= this.currentWave * this.enemiesPerWave) {
+      if (this.enemiesKilled >= playerData.currentWave * this.enemiesPerWave) {
         this.completeWave();
       }
+    } else {
+      // Animation de dégâts (flash rouge)
+      this.tweens.add({
+        targets: enemySprite,
+        alpha: 0.5,
+        duration: 50,
+        yoyo: true,
+      });
     }
   }
   
   private playerHitEnemy(player: Phaser.Types.Physics.Arcade.GameObjectWithBody, enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody) {
-    // Pour l'instant, juste un prototype simple - réinitialiser la partie si le joueur est touché
-    this.scene.restart();
-    this.score = 0;
-    this.currentWave = 1;
-    this.enemiesKilled = 0;
+    const enemySprite = enemy as Phaser.Physics.Arcade.Sprite;
+    
+    // Prendre des dégâts
+    this.currentHealth -= 10;
+    this.updateHealthBar();
+    
+    // Animation de dégâts pour le joueur (flash rouge)
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.5,
+      duration: 100,
+      yoyo: true,
+    });
+    
+    // Repousser l'ennemi
+    const angle = Phaser.Math.Angle.Between(
+      this.player.x, this.player.y,
+      enemySprite.x, enemySprite.y
+    );
+    this.physics.velocityFromRotation(angle, 200, enemySprite.body.velocity);
+    
+    // Game over si la santé atteint 0
+    if (this.currentHealth <= 0) {
+      this.gameOver();
+    }
+  }
+  
+  private gameOver() {
+    // Réinitialiser les données du joueur
+    playerData.reset();
+    
+    // Afficher un message de game over
+    const gameOverText = this.add.text(400, 250, 'GAME OVER', {
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#ff0000',
+      stroke: '#000',
+      strokeThickness: 6
+    }).setOrigin(0.5);
+    
+    // Animation pour le message
+    this.tweens.add({
+      targets: gameOverText,
+      scale: { from: 0.5, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 1000,
+      ease: 'Bounce',
+      onComplete: () => {
+        // Attendre quelques secondes puis redémarrer le jeu
+        this.time.delayedCall(3000, () => {
+          this.scene.start('BootScene');
+        });
+      }
+    });
+    
+    // Désactiver les mises à jour du jeu
+    this.waveCompleted = true;
+    
+    // Arrêter tous les ennemis
+    this.enemies.getChildren().forEach((enemy: Phaser.GameObjects.GameObject) => {
+      const e = enemy as Phaser.Physics.Arcade.Sprite;
+      e.body.velocity.x = 0;
+      e.body.velocity.y = 0;
+    });
   }
   
   private completeWave() {
@@ -276,8 +434,58 @@ export default class GameScene extends Phaser.Scene {
       delay: 500,
       ease: 'Back'
     });
+  }
+  
+  private showPointsGained(x: number, y: number, points: number) {
+    // Afficher une animation de points gagnés
+    const pointsText = this.add.text(x, y, `+${points}`, {
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#fc0',
+      stroke: '#000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
     
-    // Incrémenter la vague pour le prochain round
-    this.currentWave++;
+    // Animation de déplacement vers le haut et disparition
+    this.tweens.add({
+      targets: pointsText,
+      y: y - 50,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.Out',
+      onComplete: () => {
+        pointsText.destroy();
+      }
+    });
+  }
+  
+  private showWaveStart() {
+    // Afficher un message de début de vague
+    const waveText = this.add.text(400, 250, `WAVE ${playerData.currentWave}`, {
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#fff',
+      stroke: '#000',
+      strokeThickness: 6
+    }).setOrigin(0.5).setAlpha(0);
+    
+    // Animation d'apparition puis disparition
+    this.tweens.add({
+      targets: waveText,
+      alpha: { start: 0, from: 0, to: 1 },
+      scale: { start: 0.5, from: 0.5, to: 1 },
+      duration: 1000,
+      ease: 'Cubic.Out',
+      yoyo: true,
+      hold: 1000,
+      onComplete: () => {
+        waveText.destroy();
+        // Commencer à faire apparaître les ennemis
+        this.waveStarted = true;
+      }
+    });
+    
+    // Empêcher l'apparition d'ennemis pendant l'animation
+    this.waveStarted = false;
   }
 }
