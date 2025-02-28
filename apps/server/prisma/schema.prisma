@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Utilisateur (lié à une adresse wallet)
+model User {
+  id          String       @id @default(cuid())
+  address     String       @unique // Adresse ETH du wallet
+  username    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  gameStats   GameStats?
+  gameHistory GameHistory[]
+  ownedNFTIds String[]     // IDs des NFTs possédés
+
+  @@index([address])
+}
+
+// Statistiques globales du joueur
+model GameStats {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  totalGamesPlayed Int      @default(0)
+  highScore        Int      @default(0)
+  highestWave      Int      @default(0)
+  totalKills       Int      @default(0)
+  totalGold        Int      @default(0)
+  playTime         Int      @default(0) // en secondes
+  updatedAt        DateTime @updatedAt
+}
+
+// Historique des parties
+model GameHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  score       Int
+  wave        Int
+  duration    Int      // en secondes
+  characterId String   // ID du NFT utilisé
+  items       String[] // IDs des items utilisés
+  kills       Int
+  gold        Int
+  txHash      String?  // Hash de transaction blockchain (si score enregistré on-chain)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
