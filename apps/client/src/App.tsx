@@ -1,37 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import GameComponent from './game/GameComponent';
+import { Web3Provider } from './web3';
+import WalletConnect from './components/WalletConnect';
+import NFTInventory from './components/NFTInventory';
+import './App.css';
 
-const App: React.FC = () => {
-  const [isWeb3Ready, setIsWeb3Ready] = useState(false);
-  
-  // Simuler le chargement des composants Web3
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsWeb3Ready(true);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
+function App() {
+  const [activeTab, setActiveTab] = useState<'game' | 'inventory'>('game');
+
   return (
-    <div className="w-full h-screen bg-gray-900 text-white">
-      <header className="p-4 bg-gray-800">
-        <h1 className="text-2xl font-bold">Brotato Web3</h1>
-      </header>
-      
-      <main className="w-full flex justify-center p-4">
-        <div className="w-full max-w-6xl">
-          {!isWeb3Ready ? (
-            <div className="w-full h-[600px] flex items-center justify-center">
-              <p className="text-xl">Chargement du jeu...</p>
+    <Web3Provider>
+      <div className="app-container">
+        <header className="app-header">
+          <h1>Brotato Web3</h1>
+          <WalletConnect />
+        </header>
+        
+        <div className="tab-navigation">
+          <button 
+            className={activeTab === 'game' ? 'active' : ''}
+            onClick={() => setActiveTab('game')}
+          >
+            Jouer
+          </button>
+          <button 
+            className={activeTab === 'inventory' ? 'active' : ''}
+            onClick={() => setActiveTab('inventory')}
+          >
+            Inventaire NFT
+          </button>
+        </div>
+        
+        <main className="app-content">
+          {activeTab === 'game' ? (
+            <div className="game-container">
+              <GameComponent />
             </div>
           ) : (
-            <GameComponent />
+            <div className="inventory-container">
+              <NFTInventory />
+            </div>
           )}
-        </div>
-      </main>
-    </div>
+        </main>
+        
+        <footer className="app-footer">
+          <p>Brotato Web3 - Un jeu roguelite avec intégration blockchain</p>
+        </footer>
+      </div>
+    </Web3Provider>
   );
-};
+}
 
 export default App;
