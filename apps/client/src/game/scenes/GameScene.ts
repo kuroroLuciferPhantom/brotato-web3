@@ -149,6 +149,7 @@ export default class GameScene extends Phaser.Scene {
 
     const enemy = this.enemies.get() as Phaser.Physics.Arcade.Sprite;
     if (enemy) {
+      enemy.setTexture('enemy'); // Assurez-vous d'utiliser la bonne texture
       enemy.setActive(true);
       enemy.setVisible(true);
       enemy.setPosition(x, y);
