@@ -43,233 +43,23 @@ body {
   font-size: 1.8rem;
 }
 
-/* Navigation par onglets */
-.tab-navigation {
-  display: flex;
-  background-color: var(--surface-color);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tab-navigation button {
-  background: none;
-  border: none;
-  padding: 1rem 2rem;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.tab-navigation button.active {
-  color: var(--secondary-color);
-  border-bottom: 2px solid var(--secondary-color);
-}
-
-.tab-navigation button:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 /* Contenu principal */
 .app-content {
   flex: 1;
   padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Conteneur du jeu */
 .game-container {
   width: 100%;
   max-width: 800px;
-  margin: 0 auto;
   height: 600px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--card-border-radius);
   overflow: hidden;
-}
-
-/* Styles pour le composant WalletConnect */
-.wallet-connect {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.wallet-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.wallet-address {
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-family: monospace;
-}
-
-.connect-button, .disconnect-button {
-  background-color: var(--primary-color);
-  color: var(--text-primary);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.connect-button:hover, .disconnect-button:hover {
-  background-color: #7c4dff;
-}
-
-.disconnect-button {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.disconnect-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.error-message {
-  color: var(--error-color);
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-}
-
-/* Styles pour l'inventaire NFT */
-.nft-inventory {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-  background-color: var(--surface-color);
-  border-radius: var(--card-border-radius);
-}
-
-.nft-inventory h2 {
-  margin-bottom: 1rem;
-  color: var(--secondary-color);
-}
-
-.inventory-tabs {
-  display: flex;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.inventory-tabs button {
-  background: none;
-  border: none;
-  padding: 0.5rem 1rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.inventory-tabs button.active {
-  color: var(--secondary-color);
-  border-bottom: 2px solid var(--secondary-color);
-}
-
-.nft-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.nft-card {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: var(--card-border-radius);
-  overflow: hidden;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.nft-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.nft-card.selected {
-  box-shadow: 0 0 0 2px var(--secondary-color);
-}
-
-.nft-card-header {
-  padding: 0.5rem;
-  color: var(--text-primary);
-  font-weight: bold;
-  text-align: center;
-}
-
-.nft-card-content {
-  padding: 0.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.stat {
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-
-.nft-detail {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: var(--surface-color);
-  padding: 1.5rem;
-  border-radius: var(--card-border-radius);
-  border: 2px solid;
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  z-index: 1000;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
-.nft-detail h3 {
-  margin-bottom: 1rem;
-  color: var(--secondary-color);
-}
-
-.nft-detail h4 {
-  margin: 1rem 0 0.5rem;
-  color: var(--text-secondary);
-}
-
-.close-button {
-  background-color: var(--primary-color);
-  color: var(--text-primary);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 1rem;
-  width: 100%;
-}
-
-.refresh-button {
-  background-color: var(--primary-color);
-  color: var(--text-primary);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 1rem;
-}
-
-.refresh-button:disabled {
-  background-color: rgba(98, 0, 234, 0.5);
-  cursor: not-allowed;
 }
 
 /* Pied de page */
