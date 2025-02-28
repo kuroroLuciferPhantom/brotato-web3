@@ -19,9 +19,20 @@ model User {
   updatedAt   DateTime     @updatedAt
   gameStats   GameStats?
   gameHistory GameHistory[]
-  ownedNFTIds String[]     // IDs des NFTs possédés
+  ownedNFTs   OwnedNFT[]
 
   @@index([address])
+}
+
+// NFTs possédés par un utilisateur
+model OwnedNFT {
+  id        String @id @default(cuid())
+  tokenId   String
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Statistiques globales du joueur
@@ -47,12 +58,22 @@ model GameHistory {
   wave        Int
   duration    Int      // en secondes
   characterId String   // ID du NFT utilisé
-  items       String[] // IDs des items utilisés
   kills       Int
   gold        Int
   txHash      String?  // Hash de transaction blockchain (si score enregistré on-chain)
   createdAt   DateTime @default(now())
+  gameItems   GameItem[]
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// Items utilisés dans une partie
+model GameItem {
+  id            String      @id @default(cuid())
+  itemId        String
+  gameHistoryId String
+  gameHistory   GameHistory @relation(fields: [gameHistoryId], references: [id])
+
+  @@index([gameHistoryId])
 }
