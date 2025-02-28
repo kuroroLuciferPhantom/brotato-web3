@@ -13,12 +13,19 @@ export default class GameScene extends Phaser.Scene {
   private enemiesKilled: number = 0;
   private enemiesPerWave: number = 5;
   private enemySpawnTimer: number = 0;
+  private fireRate: number = 500; // Temps en ms entre chaque tir automatique
+  private waveCompleted: boolean = false;
+  private nextRoundBtn!: Phaser.GameObjects.Text;
+  private waveCompletedText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('GameScene');
   }
 
   create() {
+    // Réinitialiser l'état du jeu si on revient de la scène shop
+    this.waveCompleted = false;
+    
     // Ajouter un fond d'écran
     this.add.tileSprite(0, 0, 800, 600, 'background')
       .setOrigin(0)
@@ -68,28 +75,48 @@ export default class GameScene extends Phaser.Scene {
       strokeThickness: 3
     });
     this.waveText.setScrollFactor(0);
+    
+    // Créer le texte de vague complétée (caché par défaut)
+    this.waveCompletedText = this.add.text(400, 250, 'WAVE COMPLETED!', {
+      fontSize: '32px',
+      fontStyle: 'bold',
+      color: '#fff',
+      stroke: '#000',
+      strokeThickness: 5
+    }).setOrigin(0.5);
+    this.waveCompletedText.setVisible(false);
+    
+    // Créer le bouton pour passer au prochain round (caché par défaut)
+    this.nextRoundBtn = this.add.text(400, 350, 'NEXT ROUND', {
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: '#ff0',
+      backgroundColor: '#333',
+      padding: { x: 20, y: 10 },
+      stroke: '#000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    this.nextRoundBtn.setInteractive({ useHandCursor: true });
+    this.nextRoundBtn.on('pointerdown', () => {
+      // Passer à la scène de shop
+      this.scene.start('ShopScene', { 
+        currentWave: this.currentWave,
+        score: this.score
+      });
+    });
+    this.nextRoundBtn.setVisible(false);
   }
 
   update(time: number, delta: number) {
+    // Ne pas mettre à jour le jeu si la vague est terminée
+    if (this.waveCompleted) return;
+    
     // Mouvement du joueur
     this.handlePlayerMovement();
     
-    // Tir
-    if (this.cursors.space!.isDown && time > this.lastFired) {
-      const bullet = this.bullets.get() as Phaser.Physics.Arcade.Sprite;
-      if (bullet) {
-        bullet.setActive(true);
-        bullet.setVisible(true);
-        bullet.setPosition(this.player.x, this.player.y);
-        
-        // Direction aléatoire pour simplifier (à la Brotato)
-        const angle = Phaser.Math.Between(0, 360);
-        this.physics.velocityFromAngle(angle, 400, bullet.body.velocity);
-        
-        bullet.setRotation(angle * Math.PI / 180);
-        
-        this.lastFired = time + 200; // Délai entre les tirs
-      }
+    // Tir automatique périodique
+    if (time > this.lastFired) {
+      this.fireWeapon(time);
     }
     
     // Mise à jour des ennemis pour qu'ils suivent le joueur
@@ -131,6 +158,23 @@ export default class GameScene extends Phaser.Scene {
       this.player.setVelocityY(-200);
     } else if (this.cursors.down!.isDown) {
       this.player.setVelocityY(200);
+    }
+  }
+  
+  private fireWeapon(time: number) {
+    const bullet = this.bullets.get() as Phaser.Physics.Arcade.Sprite;
+    if (bullet) {
+      bullet.setActive(true);
+      bullet.setVisible(true);
+      bullet.setPosition(this.player.x, this.player.y);
+      
+      // Direction aléatoire pour simplifier (à la Brotato)
+      const angle = Phaser.Math.Between(0, 360);
+      this.physics.velocityFromAngle(angle, 400, bullet.body.velocity);
+      
+      bullet.setRotation(angle * Math.PI / 180);
+      
+      this.lastFired = time + this.fireRate; // Délai entre les tirs automatiques
     }
   }
 
@@ -188,7 +232,7 @@ export default class GameScene extends Phaser.Scene {
       
       // Vérifier si la vague est terminée
       if (this.enemiesKilled >= this.currentWave * this.enemiesPerWave) {
-        this.nextWave();
+        this.completeWave();
       }
     }
   }
@@ -201,28 +245,39 @@ export default class GameScene extends Phaser.Scene {
     this.enemiesKilled = 0;
   }
   
-  private nextWave() {
-    this.currentWave++;
-    this.waveText.setText(`Wave: ${this.currentWave}`);
-    this.enemiesKilled = 0;
+  private completeWave() {
+    // Marquer la vague comme terminée
+    this.waveCompleted = true;
     
-    // Afficher un message de nouvelle vague
-    const waveMessage = this.add.text(400, 300, `WAVE ${this.currentWave}`, {
-      fontSize: '32px',
-      color: '#ff0',
-      stroke: '#000',
-      strokeThickness: 5
-    }).setOrigin(0.5);
+    // Désactiver tous les ennemis restants
+    this.enemies.clear(true, true);
     
-    // Animation de disparition
+    // Afficher le message de fin de vague
+    this.waveCompletedText.setVisible(true);
+    
+    // Afficher le bouton pour passer au prochain round
+    this.nextRoundBtn.setVisible(true);
+    
+    // Animation pour le message de fin de vague
     this.tweens.add({
-      targets: waveMessage,
-      alpha: 0,
-      duration: 2000,
-      ease: 'Power2',
-      onComplete: () => {
-        waveMessage.destroy();
-      }
+      targets: this.waveCompletedText,
+      scale: { from: 0.5, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 1000,
+      ease: 'Bounce'
     });
+    
+    // Animation pour le bouton
+    this.tweens.add({
+      targets: this.nextRoundBtn,
+      scale: { from: 0.5, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 1000,
+      delay: 500,
+      ease: 'Back'
+    });
+    
+    // Incrémenter la vague pour le prochain round
+    this.currentWave++;
   }
 }
