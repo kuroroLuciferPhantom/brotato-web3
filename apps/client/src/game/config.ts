@@ -5,8 +5,6 @@ import ShopScene from './scenes/ShopScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
   backgroundColor: '#000',
   physics: {
     default: 'arcade',
@@ -16,7 +14,7 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE, // Mode resize pour s'adapter automatiquement
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   scene: [BootScene, GameScene, ShopScene],
