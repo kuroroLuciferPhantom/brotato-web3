@@ -1,0 +1,24 @@
+{
+  "name": "brotato-web3",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Jeu style Brotato avec intégration Web3",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter=\"./apps/*\" dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
