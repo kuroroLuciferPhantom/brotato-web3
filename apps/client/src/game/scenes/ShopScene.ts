@@ -1,37 +1,24 @@
 import Phaser from 'phaser';
+import playerData from '../data/PlayerData';
 
 interface ShopItem {
+  id: string;
   name: string;
   description: string;
   price: number;
   image: string;
-  effect: (scene: ShopScene) => void;
-}
-
-interface ShopSceneData {
-  currentWave: number;
-  score: number;
+  effect: () => void;
 }
 
 export default class ShopScene extends Phaser.Scene {
-  private currentWave: number = 1;
-  private score: number = 0;
   private availableItems: ShopItem[] = [];
-  private money: number = 100;
+  private itemContainers: Phaser.GameObjects.Container[] = [];
   private moneyText!: Phaser.GameObjects.Text;
   private nextRoundBtn!: Phaser.GameObjects.Text;
-  private itemContainers: Phaser.GameObjects.Container[] = [];
+  private statsText!: Phaser.GameObjects.Text;
 
   constructor() {
     super('ShopScene');
-  }
-
-  init(data: ShopSceneData) {
-    this.currentWave = data.currentWave;
-    this.score = data.score;
-    
-    // Donner de l'argent au joueur pour acheter des items
-    this.money = 50 + (this.currentWave * 25);
   }
 
   create() {
@@ -50,13 +37,13 @@ export default class ShopScene extends Phaser.Scene {
     }).setOrigin(0.5);
     
     // Information sur la vague et le score
-    this.add.text(400, 90, `Wave ${this.currentWave} | Score: ${this.score}`, {
+    this.add.text(400, 90, `Wave ${playerData.currentWave} | Score: ${playerData.score}`, {
       fontSize: '18px',
       color: '#ccc'
     }).setOrigin(0.5);
     
     // Texte pour l'argent disponible
-    this.moneyText = this.add.text(400, 120, `Money: ${this.money}`, {
+    this.moneyText = this.add.text(400, 120, `Money: ${playerData.money}`, {
       fontSize: '24px',
       color: '#fc0',
       stroke: '#000',
@@ -68,6 +55,9 @@ export default class ShopScene extends Phaser.Scene {
     
     // Afficher les items disponibles
     this.displayShopItems();
+    
+    // Afficher les statistiques actuelles du joueur
+    this.displayPlayerStats();
     
     // Bouton pour passer au prochain round
     this.nextRoundBtn = this.add.text(400, 530, 'CONTINUE TO NEXT WAVE', {
@@ -96,43 +86,71 @@ export default class ShopScene extends Phaser.Scene {
   
   private defineShopItems() {
     // Définir les items disponibles dans le shop
-    // Pour l'instant, ce sont des exemples, à l'avenir ils pourraient être liés à des NFTs
     this.availableItems = [
       {
+        id: 'speedBoost',
         name: 'Speed Boost',
         description: 'Increases movement speed by 10%',
         price: 50,
-        image: 'player', // Utilisation temporaire de l'image du joueur
-        effect: (scene) => {
-          // Cette fonction serait utilisée dans une version future pour appliquer l'effet
-          console.log('Speed boost purchased');
+        image: 'player',
+        effect: () => {
+          playerData.stats.moveSpeed *= 1.1;
+          this.updatePlayerStats();
         }
       },
       {
+        id: 'rapidFire',
         name: 'Rapid Fire',
         description: 'Reduces firing cooldown by 15%',
         price: 75,
-        image: 'bullet', // Utilisation temporaire de l'image du bullet
-        effect: (scene) => {
-          console.log('Rapid fire purchased');
+        image: 'bullet',
+        effect: () => {
+          playerData.stats.fireRate *= 0.85;
+          this.updatePlayerStats();
         }
       },
       {
+        id: 'tripleShot',
         name: 'Triple Shot',
         description: 'Fire 3 bullets at once',
         price: 100,
-        image: 'bullet', // Utilisation temporaire de l'image du bullet
-        effect: (scene) => {
-          console.log('Triple shot purchased');
+        image: 'bullet',
+        effect: () => {
+          playerData.stats.projectileCount = 3;
+          this.updatePlayerStats();
         }
       },
       {
+        id: 'healthBoost',
         name: 'Health Boost',
         description: 'Increases max health by 20%',
         price: 80,
-        image: 'player', // Utilisation temporaire de l'image du joueur
-        effect: (scene) => {
-          console.log('Health boost purchased');
+        image: 'player',
+        effect: () => {
+          playerData.stats.maxHealth *= 1.2;
+          this.updatePlayerStats();
+        }
+      },
+      {
+        id: 'damageBoost',
+        name: 'Damage Boost',
+        description: 'Increases bullet damage by 25%',
+        price: 85,
+        image: 'bullet',
+        effect: () => {
+          playerData.stats.damage *= 1.25;
+          this.updatePlayerStats();
+        }
+      },
+      {
+        id: 'projectileSpeed',
+        name: 'Bullet Velocity',
+        description: 'Increases bullet speed by 15%',
+        price: 60,
+        image: 'bullet',
+        effect: () => {
+          playerData.stats.projectileSpeed *= 1.15;
+          this.updatePlayerStats();
         }
       }
     ];
@@ -144,8 +162,8 @@ export default class ShopScene extends Phaser.Scene {
     this.itemContainers = [];
     
     // Calculer la disposition des items
-    const itemsPerRow = 2;
-    const itemWidth = 300;
+    const itemsPerRow = 3;
+    const itemWidth = 220;
     const itemHeight = 150;
     const startX = 400 - ((itemWidth * itemsPerRow) / 2) + (itemWidth / 2);
     const startY = 220;
@@ -166,40 +184,40 @@ export default class ShopScene extends Phaser.Scene {
         .setStrokeStyle(2, 0x666666);
       
       // Image de l'item
-      const image = this.add.image(-100, 0, item.image)
+      const image = this.add.image(-80, 0, item.image)
         .setScale(0.5);
       
       // Nom de l'item
       const nameText = this.add.text(0, -50, item.name, {
-        fontSize: '18px',
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#fff'
       }).setOrigin(0.5, 0.5);
       
       // Description de l'item
       const descText = this.add.text(0, -20, item.description, {
-        fontSize: '14px',
+        fontSize: '12px',
         color: '#ccc',
-        wordWrap: { width: itemWidth - 120 }
+        wordWrap: { width: itemWidth - 40 }
       }).setOrigin(0.5, 0.5);
       
       // Prix de l'item
       const priceText = this.add.text(0, 30, `${item.price} coins`, {
-        fontSize: '16px',
+        fontSize: '14px',
         color: '#fc0'
       }).setOrigin(0.5, 0.5);
       
       // Bouton d'achat
       const buyButton = this.add.text(0, 60, 'BUY', {
-        fontSize: '16px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: '#fff',
-        backgroundColor: item.price <= this.money ? '#080' : '#800',
+        backgroundColor: item.price <= playerData.money ? '#080' : '#800',
         padding: { x: 10, y: 5 }
       }).setOrigin(0.5, 0.5);
       
       // Activer le bouton si le joueur a assez d'argent
-      if (item.price <= this.money) {
+      if (item.price <= playerData.money) {
         buyButton.setInteractive({ useHandCursor: true });
         
         // Effet de survol
@@ -212,11 +230,11 @@ export default class ShopScene extends Phaser.Scene {
         
         // Logique d'achat
         buyButton.on('pointerdown', () => {
-          this.money -= item.price;
-          this.moneyText.setText(`Money: ${this.money}`);
+          playerData.money -= item.price;
+          this.moneyText.setText(`Money: ${playerData.money}`);
           
           // Appliquer l'effet de l'item
-          item.effect(this);
+          item.effect();
           
           // Désactiver le bouton après l'achat
           buyButton.disableInteractive();
@@ -242,11 +260,50 @@ export default class ShopScene extends Phaser.Scene {
       const item = this.availableItems[index];
       const buyButton = container.list[5] as Phaser.GameObjects.Text;
       
-      // Si le bouton n'est pas déjà acheté et qu'on a assez d'argent
-      if (buyButton.text === 'BUY' && item.price > this.money) {
+      // Si le bouton n'est pas déjà acheté et qu'on n'a pas assez d'argent
+      if (buyButton.text === 'BUY' && item.price > playerData.money) {
         buyButton.disableInteractive();
         buyButton.setBackgroundColor('#800');
       }
     });
+  }
+  
+  private displayPlayerStats() {
+    // Créer un panneau pour les statistiques du joueur
+    const statsPanel = this.add.rectangle(650, 450, 280, 200, 0x222222)
+      .setStrokeStyle(2, 0x444444);
+    
+    // Titre du panneau
+    this.add.text(650, 370, 'PLAYER STATS', {
+      fontSize: '18px',
+      fontStyle: 'bold',
+      color: '#fff'
+    }).setOrigin(0.5);
+    
+    // Texte des statistiques
+    this.statsText = this.add.text(520, 400, this.getStatsText(), {
+      fontSize: '14px',
+      color: '#ccc',
+      lineSpacing: 8
+    });
+  }
+  
+  private getStatsText(): string {
+    // Formater les statistiques du joueur pour l'affichage
+    return [
+      `Movement Speed: ${playerData.stats.moveSpeed.toFixed(1)}`,
+      `Max Health: ${playerData.stats.maxHealth.toFixed(0)}`,
+      `Fire Rate: ${(1000 / playerData.stats.fireRate).toFixed(1)} shots/s`,
+      `Damage: ${playerData.stats.damage.toFixed(1)}`,
+      `Projectiles: ${playerData.stats.projectileCount}`,
+      `Projectile Speed: ${playerData.stats.projectileSpeed.toFixed(0)}`
+    ].join('\n');
+  }
+  
+  private updatePlayerStats() {
+    // Mettre à jour l'affichage des statistiques
+    if (this.statsText) {
+      this.statsText.setText(this.getStatsText());
+    }
   }
 }
