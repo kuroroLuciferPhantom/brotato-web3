@@ -17,9 +17,9 @@
     "viem": "^1.19.11",
     "wagmi": "^1.4.8",
     "zustand": "^4.4.7",
-    "@game-core": "workspace:*",
-    "@ui": "workspace:*",
-    "@web3-core": "workspace:*"
+    "game-core": "workspace:*",
+    "ui": "workspace:*",
+    "web3-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
